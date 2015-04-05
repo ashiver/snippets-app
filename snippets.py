@@ -43,15 +43,20 @@ def rem(name):
     logging.debug("Snippet deleted successfully.")
     return name
 
-def edt(name, snippet):
+def upd(name, snippet):
     """
-    Edits snippet with given name.
+    Updates snippet with given name.
     
     If snippet exists, report old snippet and new snippet, ask for confirmation. If confirmation, replace old with new.
     
     If there is no such snippet, report that snippet does not exist.
     """
-    logging.error("FIXME: Unimplemented - edt({!r}, {!r})".format(name, snippet))
+    logging.info("Updating snippet {!r} to message: {!r}".format(name, snippet))
+    cursor = connection.cursor()
+    command = "update snippets set message={!r} where keyword={!r}".format(snippet, name)
+    cursor.execute(command)
+    connection.commit()
+    logging.debug("Snippet updated successfully.")
     return name, snippet
 
 def main():
@@ -77,6 +82,12 @@ def main():
     rem_parser = subparsers.add_parser("rem", help="Delete a snippet")
     rem_parser.add_argument("name", help="The name of the snippet")
     
+    # Subparser for the upd command
+    logging.debug("Constructing upd subparser")
+    upd_parser = subparsers.add_parser("upd", help="Update a snippet")
+    upd_parser.add_argument("name", help="The name of the snippet")
+    upd_parser.add_argument("snippet", help="The snippet text")
+    
     arguments = parser.parse_args(sys.argv[1:])
     # Convert parsed arguments from Namespace to dictionary
     arguments = vars(arguments)
@@ -91,6 +102,9 @@ def main():
     elif command == "rem":
         name = rem(**arguments)
         print("Deleted snippet: {!r}".format(name))
+    elif command == "upd":
+        name, snippet = upd(**arguments)
+        print("Updated snippet: {!r}".format(name))
     
 if __name__ == "__main__":
     main()
