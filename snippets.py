@@ -11,10 +11,12 @@ def put(name, snippet):
     Store a snippet with an associated name.
     """
     logging.info("Storing snippet {!r}: {!r})".format(name, snippet))
-    cursor = connection.cursor()
-    command = "insert into snippets values (%s, %s)"
-    cursor.execute(command, (name, snippet))
-    connection.commit()
+    try:
+        with connection, connection.cursor() as cursor:
+            cursor.execute("insert into snippets values (%s, %s)", (name, snippet))
+    except psycopg2.IntegrityError:
+        with connection, connection.cursor() as cursor:
+            cursor.execute("update snippets set message=%s where keyword=%s", (snippet, name))
     logging.debug("Snippet stored successfully.")
     return name, snippet
 
@@ -23,41 +25,31 @@ def get(name):
     Retrieve the snippet with a given name.
     """
     logging.info("Retrieving snippet {!r}".format(name))
-    cursor = connection.cursor()
-    command = "select message from snippets where keyword={!r}".format(name)
-    cursor.execute(command)
-    message = cursor.fetchone()[0]
-    connection.commit()
+    with connection, connection.cursor() as cursor:
+        cursor.execute("select message from snippets where keyword=%s", (name, ))
+        message = cursor.fetchone()
     logging.debug("Snippet retrieved successfully.")
-    return message
+    if not message:
+        return "Sorry, no snippet named {!r}.".format(name)
+    else:
+        return message[0]
 
 def rem(name):
     """
     Delete the snippet with the given name.
     """
     logging.info("Deleting snippet {!r}".format(name))
-    cursor = connection.cursor()
-    command = "delete from snippets where keyword={!r}".format(name)
-    cursor.execute(command)
-    connection.commit()
-    logging.debug("Snippet deleted successfully.")
-    return name
-
-def upd(name, snippet):
-    """
-    Updates snippet with given name.
-    
-    If snippet exists, report old snippet and new snippet, ask for confirmation. If confirmation, replace old with new.
-    
-    If there is no such snippet, report that snippet does not exist.
-    """
-    logging.info("Updating snippet {!r} to message: {!r}".format(name, snippet))
-    cursor = connection.cursor()
-    command = "update snippets set message={!r} where keyword={!r}".format(snippet, name)
-    cursor.execute(command)
-    connection.commit()
-    logging.debug("Snippet updated successfully.")
-    return name, snippet
+    with connection, connection.cursor() as cursor:
+        cursor.execute("select message from snippets where keyword=%s", (name, ))
+        message = cursor.fetchone()
+    if not message:
+        logging.debug("Tried to delete snippet. No snippet by that name.")
+        return "Sorry, no snippet named {!r}".format(name)
+    else:
+        with connection, connection.cursor() as cursor:
+            cursor.execute("delete from snippets where keyword={!r}".format(name))
+        logging.debug("Snippet deleted successfully.")
+        return name
 
 def main():
     """Main function"""
@@ -82,12 +74,6 @@ def main():
     rem_parser = subparsers.add_parser("rem", help="Delete a snippet")
     rem_parser.add_argument("name", help="The name of the snippet")
     
-    # Subparser for the upd command
-    logging.debug("Constructing upd subparser")
-    upd_parser = subparsers.add_parser("upd", help="Update a snippet")
-    upd_parser.add_argument("name", help="The name of the snippet")
-    upd_parser.add_argument("snippet", help="The snippet text")
-    
     arguments = parser.parse_args(sys.argv[1:])
     # Convert parsed arguments from Namespace to dictionary
     arguments = vars(arguments)
@@ -102,9 +88,6 @@ def main():
     elif command == "rem":
         name = rem(**arguments)
         print("Deleted snippet: {!r}".format(name))
-    elif command == "upd":
-        name, snippet = upd(**arguments)
-        print("Updated snippet: {!r}".format(name))
     
 if __name__ == "__main__":
     main()
