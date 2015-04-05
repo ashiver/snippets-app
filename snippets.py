@@ -29,20 +29,19 @@ def get(name):
     message = cursor.fetchone()[0]
     connection.commit()
     logging.debug("Snippet retrieved successfully.")
-    if not message:
-        # "Sorry, nothing stored under {!r} yet.".format(name)
     return message
 
 def rem(name):
     """
     Delete the snippet with the given name.
-    
-    If snippet exists, report snippet and asks for confirmation. If confirmation, delete snippet.
-    
-    If there is no such snippet, report that snippet does not exist.
     """
-    logging.error("FIXME: Unimplemented - rem({!r})".format(name))
-    return ""
+    logging.info("Deleting snippet {!r}".format(name))
+    cursor = connection.cursor()
+    command = "delete from snippets where keyword={!r}".format(name)
+    cursor.execute(command)
+    connection.commit()
+    logging.debug("Snippet deleted successfully.")
+    return name
 
 def edt(name, snippet):
     """
@@ -73,6 +72,11 @@ def main():
     get_parser = subparsers.add_parser("get", help="Retrieve a snippet")
     get_parser.add_argument("name", help="The name of the snippet")
     
+    # Subparser for the rem command
+    logging.debug("Constructing rem subparser")
+    rem_parser = subparsers.add_parser("rem", help="Delete a snippet")
+    rem_parser.add_argument("name", help="The name of the snippet")
+    
     arguments = parser.parse_args(sys.argv[1:])
     # Convert parsed arguments from Namespace to dictionary
     arguments = vars(arguments)
@@ -84,6 +88,9 @@ def main():
     elif command == "get":
         snippet = get(**arguments)
         print("Retrieved snippet: {!r}".format(snippet))
+    elif command == "rem":
+        name = rem(**arguments)
+        print("Deleted snippet: {!r}".format(name))
     
 if __name__ == "__main__":
     main()
