@@ -1,4 +1,4 @@
-import logging, argparse, sys, psycopg2
+import logging, argparse, sys, psycopg2, os
 
 # Set the log output file, and the log level
 logging.basicConfig(filename="snippets.log", level=logging.DEBUG)
@@ -112,3 +112,4 @@ def main():
     
 if __name__ == "__main__":
     main()
+    os.popen("rm ~/thinkful/projects/snippets-app/snippets.log") # Deletes log file if main succeeds
